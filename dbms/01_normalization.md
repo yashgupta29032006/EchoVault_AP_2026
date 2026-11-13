@@ -190,18 +190,18 @@ In legacy or prototype systems, data often starts as flat files, single denormal
 
 To demonstrate the full academic normalization journey, we formulate the **Universal Unnormalized EchoVault Relation (`UNF_ECHOVAULT_RECORD`)**. This representation reflects how a single continuous recording and interaction event captures sessions, pause intervals, transcripts, synthesized memories, extracted entities, proposed action sequences, tasks, calendar sync entries, and contacts in a single nested structure.
 
-``` KaTeX
+$$
 \begin{aligned}
-\text{UNF\_ECHOVAULT}(\text{session\_id}, \text{session\_status}, \text{started\_at}, \text{ended\_at}, \text{duration\_seconds}, \text{user\_id}, \text{user\_name}, \text{user\_email}, \\
-\{\text{pause\_interval\_id}, \text{paused\_at}, \text{resumed\_at}\}, \\
-\{\text{chunk\_id}, \text{chunk\_seq}, \text{chunk\_text}, \text{raw\_text}, \text{confidence}, \text{raw\_confidence}, \text{speaker}, \text{start\_time}, \text{end\_time}\}, \\
-\{\text{refined\_id}, \text{summary}, \text{category}, \text{importance}, \text{status}, \{\text{entity\_type}, \text{entity\_value}\}, \{\text{source\_chunk\_id}\}\}, \\
-\{\text{execution\_id}, \text{command\_text}, \text{intent}, \text{exec\_status}, \{\text{action\_id}, \text{tool\_name}, \text{action\_verb}, \text{params}, \text{action\_status}, \{\text{prerequisite\_action\_id}\}\}\}, \\
-\{\text{calendar\_sync\_id}, \text{external\_event\_id}, \text{sync\_summary}, \text{event\_start}, \text{event\_end}, \text{sync\_status}\}, \\
-\{\text{reminder\_id}, \text{rem\_title}, \text{scheduled\_for}, \text{due\_date}, \text{rem\_status}, \text{rem\_priority}\}, \\
-\{\text{pending\_id}, \text{phone}, \text{contact\_name}, \text{contact\_status}, \text{contact\_confidence}, \text{google\_resource\_name}\})
+\text{UNF\_ECHOVAULT}( & \text{session\_id}, \text{session\_status}, \text{started\_at}, \text{ended\_at}, \text{duration\_seconds}, \text{user\_id}, \text{user\_name}, \text{user\_email}, \\
+& \{\text{pause\_interval\_id}, \text{paused\_at}, \text{resumed\_at}\}, \\
+& \{\text{chunk\_id}, \text{chunk\_seq}, \text{chunk\_text}, \text{raw\_text}, \text{confidence}, \text{raw\_confidence}, \text{speaker}, \text{start\_time}, \text{end\_time}\}, \\
+& \{\text{refined\_id}, \text{summary}, \text{category}, \text{importance}, \text{status}, \{\text{entity\_type}, \text{entity\_value}\}, \{\text{source\_chunk\_id}\}\}, \\
+& \{\text{execution\_id}, \text{command\_text}, \text{intent}, \text{exec\_status}, \{\text{action\_id}, \text{tool\_name}, \text{action\_verb}, \text{params}, \text{action\_status}, \{\text{prerequisite\_action\_id}\}\}\}, \\
+& \{\text{calendar\_sync\_id}, \text{external\_event\_id}, \text{sync\_summary}, \text{event\_start}, \text{event\_end}, \text{sync\_status}\}, \\
+& \{\text{reminder\_id}, \text{rem\_title}, \text{scheduled\_for}, \text{due\_date}, \text{rem\_status}, \text{rem\_priority}\}, \\
+& \{\text{pending\_id}, \text{phone}, \text{contact\_name}, \text{contact\_status}, \text{contact\_confidence}, \text{google\_resource\_name}\} )
 \end{aligned}
-```
+$$
 
 ### 6.2 Synthetic Illustrative Scenario (UNF Concrete Instance)
 
@@ -270,63 +270,93 @@ To achieve 1NF, we flatten all repeating groups into distinct relations and deco
 
 #### Relation 1: `USERS_1NF`
 Stores atomic user identity information.
-- $\underline{\text{user\_id}}$, $\text{full\_name}$, $\text{email}$, $\text{created\_at}$
+- **Primary Key:** `user_id`
+- **Foreign Keys:** None
+- **Attributes:** `full_name`, `email`, `created_at`
 
 #### Relation 2: `LISTENING_SESSIONS_1NF`
 Stores individual recording sessions.
-- $\underline{\text{session\_id}}$, $\text{user\_id}$, $\text{status}$, $\text{started\_at}$, $\text{ended\_at}$, $\text{duration\_seconds}$
+- **Primary Key:** `session_id`
+- **Foreign Keys:** `user_id`
+- **Attributes:** `status`, `started_at`, `ended_at`, `duration_seconds`
 
 #### Relation 3: `SESSION_PAUSE_INTERVALS_1NF`
 Decomposes multiple pause and resume timestamps into discrete interval records.
-- $\underline{\text{interval\_id}}$, $\text{session\_id}$, $\text{paused\_at}$, $\text{resumed\_at}$, $\text{pause\_duration\_seconds}$
+- **Primary Key:** `interval_id`
+- **Foreign Keys:** `session_id`
+- **Attributes:** `paused_at`, `resumed_at`, `pause_duration_seconds`
 
 #### Relation 4: `TRANSCRIPT_CHUNKS_1NF`
 Stores atomic speech segment utterances.
-- $\underline{\text{chunk\_id}}$, $\text{session\_id}$, $\text{sequence\_number}$, $\text{timestamp}$, $\text{text}$, $\text{original\_text}$, $\text{confidence}$, $\text{raw\_confidence}$, $\text{speaker}$, $\text{start\_time}$, $\text{end\_time}$, $\text{is\_deleted}$, $\text{is\_reviewed}$, $\text{is\_important}$, $\text{category}$, $\text{last\_edited\_at}$, $\text{is\_final}$
+- **Primary Key:** `chunk_id`
+- **Foreign Keys:** `session_id`
+- **Attributes:** `sequence_number`, `timestamp`, `text`, `original_text`, `confidence`, `raw_confidence`, `speaker`, `start_time`, `end_time`, `is_deleted`, `is_reviewed`, `is_important`, `category`, `last_edited_at`, `is_final`
 
 #### Relation 5: `REFINED_MEMORIES_1NF`
 Stores synthesized memory records (without multi-valued arrays).
-- $\underline{\text{refined\_id}}$, $\text{user\_id}$, $\text{summary}`, $\text{category}$, $\text{status}$, $\text{importance\_score}$, $\text{last\_updated}$, $\text{is\_deleted}$
+- **Primary Key:** `refined_id`
+- **Foreign Keys:** `user_id`
+- **Attributes:** `summary`, `category`, `status`, `importance_score`, `last_updated`, `is_deleted`
 
 #### Relation 6: `MEMORY_CHUNK_SOURCES_1NF`
 Decomposes the multivalued `source_memory_ids` JSON array into atomic rows.
-- $\underline{\text{refined\_id}, \text{chunk\_id}}$, $\text{association\_score}$
+- **Primary Key:** `(refined_id, chunk_id)`
+- **Foreign Keys:** `refined_id`, `chunk_id`
+- **Attributes:** `association_score`
 
 #### Relation 7: `MEMORY_ENTITIES_1NF`
 Decomposes the multivalued `entities` JSON object into atomic entity-attribute rows.
-- $\underline{\text{entity\_id}}$, $\text{refined\_id}$, $\text{entity\_type}$, $\text{entity\_value}$
+- **Primary Key:** `entity_id`
+- **Foreign Keys:** `refined_id`
+- **Attributes:** `entity_type`, `entity_value`
 
 #### Relation 8: `AUTOMATION_EXECUTIONS_1NF`
 Stores top-level execution triggers.
-- $\underline{\text{execution\_id}}$, $\text{session\_id}$, $\text{user\_id}$, $\text{command\_text}$, $\text{detected\_intent}$, $\text{status}$, $\text{error\_message}$, $\text{created\_at}$, $\text{updated\_at}$
+- **Primary Key:** `execution_id`
+- **Foreign Keys:** `session_id` (nullable), `user_id`
+- **Attributes:** `command_text`, `detected_intent`, `status`, `error_message`, `created_at`, `updated_at`
 
 #### Relation 9: `PLANNED_ACTIONS_1NF`
 Decomposes `proposed_actions` and `executed_actions` JSON arrays into individual action tuples.
-- $\underline{\text{action\_id}}$, $\text{execution\_id}$, $\text{tool\_name}$, $\text{action\_verb}$, $\text{parameters\_payload}$, $\text{status}$, $\text{result\_payload}$, $\text{error\_message}$, $\text{sequence\_order}$, $\text{executed\_at}$
+- **Primary Key:** `action_id`
+- **Foreign Keys:** `execution_id`
+- **Attributes:** `tool_name`, `action_verb`, `parameters_payload`, `status`, `result_payload`, `error_message`, `sequence_order`, `executed_at`
 
 #### Relation 10: `ACTION_DEPENDENCIES_1NF`
 Decomposes action DAG dependency lists (`depends_on`) into atomic binary relationships scoped to the execution.
-- $\underline{\text{action\_id}, \text{depends\_on\_action\_id}}$, $\text{execution\_id}$
+- **Primary Key:** `(action_id, depends_on_action_id)`
+- **Foreign Keys:** `(execution_id, action_id)`, `(execution_id, depends_on_action_id)`
+- **Attributes:** `execution_id`
 
 #### Relation 11: `CALENDAR_EVENT_SYNC_1NF`
 Normalizes external Google Calendar event synchronization records and execution links.
-- $\underline{\text{sync\_id}}$, $\text{action\_id}$, $\text{chunk\_id}$, $\text{external\_event\_id}$, $\text{event\_summary}$, $\text{start\_time}$, $\text{end\_time}$, $\text{sync\_status}$, $\text{error\_message}$, $\text{created\_at}$, $\text{updated\_at}$
+- **Primary Key:** `sync_id`
+- **Foreign Keys:** `action_id` (nullable), `chunk_id` (nullable)
+- **Attributes:** `external_event_id`, `event_summary`, `start_time`, `end_time`, `sync_status`, `error_message`, `created_at`, `updated_at`
 
 #### Relation 12: `TASK_REMINDERS_1NF`
 Stores tasks and reminders.
-- $\underline{\text{reminder\_id}}$, $\text{user\_id}$, $\text{title}$, $\text{description}$, $\text{scheduled\_for}$, $\text{due\_date}$, $\text{status}$, $\text{category}$, $\text{priority}$, $\text{source}$, $\text{external\_reference}$, $\text{created\_at}$, $\text{updated\_at}$
+- **Primary Key:** `reminder_id`
+- **Foreign Keys:** `user_id`
+- **Attributes:** `title`, `description`, `scheduled_for`, `due_date`, `status`, `category`, `priority`, `source`, `external_reference`, `created_at`, `updated_at`
 
 #### Relation 13: `PENDING_CONTACTS_1NF`
 Stores candidate phone records pending identity verification.
-- $\underline{\text{pending\_id}}$, $\text{user\_id}$, $\text{phone}$, $\text{name}$, $\text{status}$, $\text{confidence}$, $\text{context}$, $\text{source}$, $\text{reminder\_id}$, $\text{google\_resource\_name}$, $\text{captured\_at}$, $\text{resolved\_at}$, $\text{updated\_at}$
+- **Primary Key:** `pending_id`
+- **Foreign Keys:** `user_id`, `reminder_id` (nullable)
+- **Attributes:** `phone`, `name`, `status`, `confidence`, `context`, `source`, `google_resource_name`, `captured_at`, `resolved_at`, `updated_at`
 
 #### Relation 14: `CONVERSATION_SESSIONS_1NF`
 Stores conversational thread headers.
-- $\underline{\text{conversation\_id}}$, $\text{user\_id}$, $\text{title}$, $\text{started\_at}$, $\text{last\_message\_at}$, $\text{is\_archived}$
+- **Primary Key:** `conversation_id`
+- **Foreign Keys:** `user_id`
+- **Attributes:** `title`, `started_at`, `last_message_at`, `is_archived`
 
 #### Relation 15: `CONVERSATION_MESSAGES_1NF`
 Stores individual chat interaction turns.
-- $\underline{\text{message\_id}}$, $\text{conversation\_id}$, $\text{sender\_role}$, $\text{message\_content}$, $\text{message\_seq}$, $\text{timestamp}$
+- **Primary Key:** `message_id`
+- **Foreign Keys:** `conversation_id`
+- **Attributes:** `sender_role`, `message_content`, `message_seq`, `timestamp`
 
 ---
 
@@ -443,15 +473,15 @@ BCNF is strictly stronger than 3NF: it disallows dependencies $X \to A$ where $A
 
 #### 1. Relation: `USERS`
 - Attributes: `user_id`, `email`, `full_name`, `created_at`
-- Candidate Keys: $CK_1 = \{\text{user\_id}\}$, $CK_2 = \{\text{email}\}$
+- Candidate Keys: `user_id` (CK₁, Primary Key), `email` (CK₂, Alternate Key)
 - Functional Dependencies:
-  1. $\text{user\_id} \to \text{email}, \text{full\_name}, \text{created\_at}$ (Determinant $\text{user\_id}$ is a superkey)
-  2. $\text{email} \to \text{user\_id}, \text{full\_name}, \text{created\_at}$ (Determinant $\text{email}$ is a superkey)
+  1. $\text{user\_id} \to \text{email}, \text{full\_name}, \text{created\_at}$ (Determinant `user_id` is a superkey)
+  2. $\text{email} \to \text{user\_id}, \text{full\_name}, \text{created\_at}$ (Determinant `email` is a superkey)
 - **BCNF Status:** **Satisfied.** Every determinant is a candidate key.
 
 #### 2. Relation: `LISTENING_SESSIONS`
 - Attributes: `session_id`, `user_id`, `status`, `started_at`, `ended_at`, `duration_seconds`
-- Candidate Key: $CK = \{\text{session\_id}\}$
+- Candidate Key: `session_id` (CK)
 - Functional Dependencies:
   $$\text{session\_id} \to \text{user\_id}, \text{status}, \text{started\_at}, \text{ended\_at}, \text{duration\_seconds}$$
 - Non-key determinants: None.
@@ -459,7 +489,7 @@ BCNF is strictly stronger than 3NF: it disallows dependencies $X \to A$ where $A
 
 #### 3. Relation: `SESSION_PAUSE_INTERVALS`
 - Attributes: `interval_id`, `session_id`, `paused_at`, `resumed_at`, `pause_duration_seconds`
-- Candidate Key: $CK = \{\text{interval\_id}\}$
+- Candidate Key: `interval_id` (CK)
 - Functional Dependencies:
   $$\text{interval\_id} \to \text{session\_id}, \text{paused\_at}, \text{resumed\_at}, \text{pause\_duration\_seconds}$$
 - **BCNF Status:** **Satisfied.**
@@ -467,24 +497,24 @@ BCNF is strictly stronger than 3NF: it disallows dependencies $X \to A$ where $A
 #### 4. Relation: `TRANSCRIPT_CHUNKS`
 - Attributes: `chunk_id`, `session_id`, `sequence_number`, `timestamp`, `text`, `original_text`, `raw_confidence`, `confidence`, `speaker`, `start_time`, `end_time`, `is_deleted`, `is_reviewed`, `is_important`, `category`, `last_edited_at`, `is_final`
 - Candidate Keys:
-  - $CK_1 = \{\text{chunk\_id}\}$
-  - $CK_2 = \{\text{session\_id}, \text{sequence\_number}\}$
+  - CK₁: `chunk_id`
+  - CK₂: {`session_id`, `sequence_number`}
 - Functional Dependencies:
-  1. $\text{chunk\_id} \to \text{session\_id}, \text{sequence\_number}, \dots$ (Determinant is superkey $CK_1$)
-  2. $\{\text{session\_id}, \text{sequence\_number}\} \to \text{chunk\_id}, \dots$ (Determinant is superkey $CK_2$)
+  1. $\text{chunk\_id} \to \text{session\_id}, \text{sequence\_number}, \dots$ (Determinant is superkey CK₁)
+  2. $\{\text{session\_id}, \text{sequence\_number}\} \to \text{chunk\_id}, \dots$ (Determinant is superkey CK₂)
   3. $\text{raw\_confidence} \to \text{confidence}$ (Generated stored column choice; implementation-enforced determinism).
 - **BCNF Status:** **Satisfied under Generated Column Semantics.**
 
 #### 5. Relation: `REFINED_MEMORIES`
 - Attributes: `refined_id`, `user_id`, `summary`, `category`, `status`, `importance_score`, `last_updated`, `is_deleted`
-- Candidate Key: $CK = \{\text{refined\_id}\}$
+- Candidate Key: `refined_id` (CK)
 - Functional Dependencies:
   $$\text{refined\_id} \to \text{user\_id}, \text{summary}, \text{category}, \text{status}, \text{importance\_score}, \text{last\_updated}, \text{is\_deleted}$$
 - **BCNF Status:** **Satisfied.**
 
 #### 6. Relation: `MEMORY_CHUNK_SOURCES`
 - Attributes: `refined_id`, `chunk_id`, `association_score`
-- Candidate Key: $CK = \{\text{refined\_id}, \text{chunk\_id}\}$
+- Candidate Key: {`refined_id`, `chunk_id`} (CK)
 - Functional Dependency:
   $$\{\text{refined\_id}, \text{chunk\_id}\} \to \text{association\_score}$$
 - Determinant is the entire candidate key.
@@ -492,15 +522,17 @@ BCNF is strictly stronger than 3NF: it disallows dependencies $X \to A$ where $A
 
 #### 7. Relation: `MEMORY_ENTITIES`
 - Attributes: `entity_id`, `refined_id`, `entity_type`, `entity_value`
-- Candidate Keys: $CK_1 = \{\text{entity\_id}\}$, $CK_2 = \{\text{refined\_id}, \text{entity\_type}, \text{entity\_value}\}$
+- Candidate Keys:
+  - CK₁: `entity_id`
+  - CK₂: {`refined_id`, `entity_type`, `entity_value`}
 - Functional Dependencies:
-  1. $\text{entity\_id} \to \text{refined\_id}, \text{entity\_type}, \text{entity\_value}$
-  2. $\{\text{refined\_id}, \text{entity\_type}, \text{entity\_value}\} \to \text{entity\_id}$
+  1. $\text{entity\_id} \to \text{refined\_id}, \text{entity\_type}, \text{entity\_value}$ (Determinant is superkey CK₁)
+  2. $\{\text{refined\_id}, \text{entity\_type}, \text{entity\_value}\} \to \text{entity\_id}$ (Determinant is superkey CK₂)
 - **BCNF Status:** **Satisfied.**
 
 #### 8. Relation: `AUTOMATION_EXECUTIONS`
 - Attributes: `execution_id`, `session_id`, `user_id`, `command_text`, `detected_intent`, `status`, `error_message`, `created_at`, `updated_at`
-- Candidate Key: $CK = \{\text{execution\_id}\}$
+- Candidate Key: `execution_id` (CK)
 - Functional Dependencies:
   $$\text{execution\_id} \to \text{session\_id}, \text{user\_id}, \text{command\_text}, \text{detected\_intent}, \text{status}, \text{error\_message}, \text{created\_at}, \text{updated\_at}$$
 - **BCNF Status:** **Satisfied.**
@@ -508,17 +540,17 @@ BCNF is strictly stronger than 3NF: it disallows dependencies $X \to A$ where $A
 #### 9. Relation: `PLANNED_ACTIONS`
 - Attributes: `action_id`, `execution_id`, `tool_name`, `action_verb`, `parameters_payload`, `status`, `result_payload`, `error_message`, `sequence_order`, `executed_at`
 - Candidate Keys:
-  - $CK_1 = \{\text{action\_id}\}$
-  - $CK_2 = \{\text{execution\_id}, \text{sequence\_order}\}$
-  - Alternate unique composite key: $CK_3 = \{\text{execution\_id}, \text{action\_id}\}$
+  - CK₁: `action_id`
+  - CK₂: {`execution_id`, `sequence_order`}
+  - Alternate unique composite key (CK₃): {`execution_id`, `action_id`}
 - Functional Dependencies:
-  1. $\text{action\_id} \to \text{execution\_id}, \text{tool\_name}, \dots$ (Determinant is $CK_1$)
-  2. $\{\text{execution\_id}, \text{sequence\_order}\} \to \text{action\_id}, \dots$ (Determinant is $CK_2$)
+  1. $\text{action\_id} \to \text{execution\_id}, \text{tool\_name}, \dots$ (Determinant is CK₁)
+  2. $\{\text{execution\_id}, \text{sequence\_order}\} \to \text{action\_id}, \dots$ (Determinant is CK₂)
 - **BCNF Status:** **Satisfied.**
 
 #### 10. Relation: `ACTION_DEPENDENCIES`
 - Attributes: `execution_id`, `action_id`, `depends_on_action_id`
-- Candidate Key: $CK = \{\text{action\_id}, \text{depends\_on\_action\_id}\}$
+- Candidate Key: {`action_id`, `depends_on_action_id`} (CK)
 - Dependencies:
   $$\text{action\_id} \to \text{execution\_id}$$
   $$\text{depends\_on\_action\_id} \to \text{execution\_id}$$
@@ -532,8 +564,9 @@ BCNF is strictly stronger than 3NF: it disallows dependencies $X \to A$ where $A
 
 #### 11. Relation: `CALENDAR_EVENT_SYNC`
 - Attributes: `sync_id`, `action_id`, `chunk_id`, `external_event_id`, `event_summary`, `start_time`, `end_time`, `sync_status`, `error_message`, `created_at`, `updated_at`
-- Candidate Key: $CK = \{\text{sync\_id}\}$
-- Alternate Key: $\{\text{external\_event\_id}\}$
+- Candidate Keys:
+  - CK₁: `sync_id` (Primary Key)
+  - CK₂: `external_event_id` (Alternate Key)
 - Functional Dependencies:
   $$\text{sync\_id} \to \text{action\_id}, \text{chunk\_id}, \text{external\_event\_id}, \dots$$
   $$\text{external\_event\_id} \to \text{sync\_id}, \text{action\_id}, \text{chunk\_id}, \dots$$
@@ -541,7 +574,7 @@ BCNF is strictly stronger than 3NF: it disallows dependencies $X \to A$ where $A
 
 #### 12. Relation: `TASK_REMINDERS`
 - Attributes: `reminder_id`, `user_id`, `title`, `description`, `scheduled_for`, `due_date`, `status`, `category`, `priority`, `source`, `external_reference`, `created_at`, `updated_at`
-- Candidate Key: $CK = \{\text{reminder\_id}\}$
+- Candidate Key: `reminder_id` (CK)
 - Functional Dependencies:
   $$\text{reminder\_id} \to \text{user\_id}, \text{title}, \text{description}, \text{scheduled\_for}, \text{due\_date}, \text{status}, \text{category}, \text{priority}, \text{source}, \text{external\_reference}, \text{created\_at}, \text{updated\_at}$$
 - **BCNF Status:** **Satisfied.**
@@ -549,8 +582,8 @@ BCNF is strictly stronger than 3NF: it disallows dependencies $X \to A$ where $A
 #### 13. Relation: `PENDING_CONTACTS`
 - Attributes: `pending_id`, `user_id`, `phone`, `name`, `status`, `confidence`, `context`, `source`, `reminder_id`, `google_resource_name`, `captured_at`, `resolved_at`, `updated_at`
 - Candidate Keys:
-  - $CK_1 = \{\text{pending\_id}\}$ (The primary key identifying every tuple)
-  - Alternate Key: $\{\text{reminder\_id}\}$ (Enforced via `UNIQUE`, holding for rows where `reminder_id IS NOT NULL`)
+  - CK₁: `pending_id` (The primary key identifying every tuple)
+  - Alternate Key: `reminder_id` (Enforced via `UNIQUE`, holding for rows where `reminder_id IS NOT NULL`)
 - **Rigorous Clarification on `(user_id, phone, status)`:**
   - In `pending_contacts.py` lines 86–90, the application enforces that only *one* pending record may exist at status `'pending_name'` for a given phone number.
   - This is enforced in PostgreSQL via a **partial unique index**:
@@ -564,17 +597,19 @@ BCNF is strictly stronger than 3NF: it disallows dependencies $X \to A$ where $A
 
 #### 14. Relation: `CONVERSATION_SESSIONS`
 - Attributes: `conversation_id`, `user_id`, `title`, `started_at`, `last_message_at`, `is_archived`
-- Candidate Key: $CK = \{\text{conversation\_id}\}$
+- Candidate Key: `conversation_id` (CK)
 - Functional Dependencies:
   $$\text{conversation\_id} \to \text{user\_id}, \text{title}, \text{started\_at}, \text{last\_message\_at}, \text{is\_archived}$$
 - **BCNF Status:** **Satisfied.**
 
 #### 15. Relation: `CONVERSATION_MESSAGES`
 - Attributes: `message_id`, `conversation_id`, `sender_role`, `message_content`, `message_seq`, `timestamp`
-- Candidate Keys: $CK_1 = \{\text{message\_id}\}$, $CK_2 = \{\text{conversation\_id}, \text{message\_seq}\}$
+- Candidate Keys:
+  - CK₁: `message_id`
+  - CK₂: {`conversation_id`, `message_seq`}
 - Functional Dependencies:
-  1. $\text{message\_id} \to \text{conversation\_id}, \text{sender\_role}, \text{message\_content}, \text{message\_seq}, \text{timestamp}$
-  2. $\{\text{conversation\_id}, \text{message\_seq}\} \to \text{message\_id}, \dots$
+  1. $\text{message\_id} \to \text{conversation\_id}, \text{sender\_role}, \text{message\_content}, \text{message\_seq}, \text{timestamp}$ (Determinant is superkey CK₁)
+  2. $\{\text{conversation\_id}, \text{message\_seq}\} \to \text{message\_id}, \dots$ (Determinant is superkey CK₂)
 - **BCNF Status:** **Satisfied.**
 
 ---
@@ -613,38 +648,38 @@ The table below catalogs candidate keys, functional dependencies, superkeys, and
 
 #### Relation 2: `listening_sessions`
 - **Purpose:** Tracks continuous microphone capture and hardware streaming sessions.
-- **Attributes:** `session_id` (VARCHAR(64), PK), `user_id` (UUID, FK $\to$ `users.user_id`), `status` (VARCHAR(20), Not Null), `started_at` (TIMESTAMPTZ, Not Null), `ended_at` (TIMESTAMPTZ, Nullable), `duration_seconds` (DOUBLE PRECISION, Not Null).
+- **Attributes:** `session_id` (VARCHAR(64), PK), `user_id` (UUID, FK → `users.user_id`), `status` (VARCHAR(20), Not Null), `started_at` (TIMESTAMPTZ, Not Null), `ended_at` (TIMESTAMPTZ, Nullable), `duration_seconds` (DOUBLE PRECISION, Not Null).
 
 #### Relation 3: `session_pause_intervals`
 - **Purpose:** Detailed audit records of pause and resume intervals during active listening.
-- **Attributes:** `interval_id` (BIGSERIAL, PK), `session_id` (VARCHAR(64), FK $\to$ `listening_sessions.session_id`), `paused_at` (TIMESTAMPTZ, Not Null), `resumed_at` (TIMESTAMPTZ, Nullable), `pause_duration_seconds` (DOUBLE PRECISION, Nullable).
+- **Attributes:** `interval_id` (BIGSERIAL, PK), `session_id` (VARCHAR(64), FK → `listening_sessions.session_id`), `paused_at` (TIMESTAMPTZ, Not Null), `resumed_at` (TIMESTAMPTZ, Nullable), `pause_duration_seconds` (DOUBLE PRECISION, Nullable).
 
 #### Relation 4: `transcript_chunks`
 - **Purpose:** Atomic transcribed audio utterances from faster-whisper.
-- **Attributes:** `chunk_id` (VARCHAR(64), PK), `session_id` (VARCHAR(64), FK $\to$ `listening_sessions.session_id`), `sequence_number` (INTEGER, Not Null), `timestamp` (TIMESTAMPTZ, Not Null), `text` (TEXT, Not Null), `original_text` (TEXT, Not Null), `raw_confidence` (REAL, Not Null), `confidence` (INTEGER, Generated Stored Column), `speaker` (VARCHAR(64), Nullable), `start_time` (REAL, Not Null), `end_time` (REAL, Not Null), `is_deleted` (BOOLEAN, Not Null), `is_reviewed` (BOOLEAN, Not Null), `is_important` (BOOLEAN, Not Null), `category` (VARCHAR(50), Not Null), `last_edited_at` (TIMESTAMPTZ, Nullable), `is_final` (BOOLEAN, Not Null).
+- **Attributes:** `chunk_id` (VARCHAR(64), PK), `session_id` (VARCHAR(64), FK → `listening_sessions.session_id`), `sequence_number` (INTEGER, Not Null), `timestamp` (TIMESTAMPTZ, Not Null), `text` (TEXT, Not Null), `original_text` (TEXT, Not Null), `raw_confidence` (REAL, Not Null), `confidence` (INTEGER, Generated Stored Column), `speaker` (VARCHAR(64), Nullable), `start_time` (REAL, Not Null), `end_time` (REAL, Not Null), `is_deleted` (BOOLEAN, Not Null), `is_reviewed` (BOOLEAN, Not Null), `is_important` (BOOLEAN, Not Null), `category` (VARCHAR(50), Not Null), `last_edited_at` (TIMESTAMPTZ, Nullable), `is_final` (BOOLEAN, Not Null).
 - **Constraints:** `UNIQUE (session_id, sequence_number)`.
 
 #### Relation 5: `refined_memories`
 - **Purpose:** Distilled, consolidated knowledge memories extracted by LLM.
-- **Attributes:** `refined_id` (VARCHAR(64), PK), `user_id` (UUID, FK $\to$ `users.user_id`), `summary` (TEXT, Not Null), `category` (VARCHAR(50), Not Null), `status` (VARCHAR(20), Not Null), `importance_score` (REAL, Not Null), `last_updated` (TIMESTAMPTZ, Not Null), `is_deleted` (BOOLEAN, Not Null).
+- **Attributes:** `refined_id` (VARCHAR(64), PK), `user_id` (UUID, FK → `users.user_id`), `summary` (TEXT, Not Null), `category` (VARCHAR(50), Not Null), `status` (VARCHAR(20), Not Null), `importance_score` (REAL, Not Null), `last_updated` (TIMESTAMPTZ, Not Null), `is_deleted` (BOOLEAN, Not Null).
 
 #### Relation 6: `memory_chunk_sources`
 - **Purpose:** Normalized M:N junction linking Refined Memories to original Transcript Chunks.
-- **Attributes:** `refined_id` (VARCHAR(64), FK $\to$ `refined_memories.refined_id`), `chunk_id` (VARCHAR(64), FK $\to$ `transcript_chunks.chunk_id`), `association_score` (REAL, Not Null).
+- **Attributes:** `refined_id` (VARCHAR(64), FK → `refined_memories.refined_id`), `chunk_id` (VARCHAR(64), FK → `transcript_chunks.chunk_id`), `association_score` (REAL, Not Null).
 - **Primary Key:** `(refined_id, chunk_id)`.
 
 #### Relation 7: `memory_entities`
 - **Purpose:** Normalized storage of extracted entities (people, projects, dates, topics).
-- **Attributes:** `entity_id` (BIGSERIAL, PK), `refined_id` (VARCHAR(64), FK $\to$ `refined_memories.refined_id`), `entity_type` (VARCHAR(50), Not Null), `entity_value` (VARCHAR(255), Not Null).
+- **Attributes:** `entity_id` (BIGSERIAL, PK), `refined_id` (VARCHAR(64), FK → `refined_memories.refined_id`), `entity_type` (VARCHAR(50), Not Null), `entity_value` (VARCHAR(255), Not Null).
 - **Constraints:** `UNIQUE (refined_id, entity_type, entity_value)`.
 
 #### Relation 8: `automation_executions`
 - **Purpose:** Top-level records of agent workflows initiated from voice commands or chat.
-- **Attributes:** `execution_id` (VARCHAR(64), PK), `session_id` (VARCHAR(64), Nullable FK $\to$ `listening_sessions.session_id`), `user_id` (UUID, FK $\to$ `users.user_id`), `command_text` (TEXT, Not Null), `detected_intent` (VARCHAR(50), Not Null), `status` (VARCHAR(30), Not Null), `error_message` (TEXT, Nullable), `created_at` (TIMESTAMPTZ, Not Null), `updated_at` (TIMESTAMPTZ, Not Null).
+- **Attributes:** `execution_id` (VARCHAR(64), PK), `session_id` (VARCHAR(64), Nullable FK → `listening_sessions.session_id`), `user_id` (UUID, FK → `users.user_id`), `command_text` (TEXT, Not Null), `detected_intent` (VARCHAR(50), Not Null), `status` (VARCHAR(30), Not Null), `error_message` (TEXT, Nullable), `created_at` (TIMESTAMPTZ, Not Null), `updated_at` (TIMESTAMPTZ, Not Null).
 
 #### Relation 9: `planned_actions`
 - **Purpose:** Discrete action execution steps planned by the DAG planner.
-- **Attributes:** `action_id` (VARCHAR(64), PK), `execution_id` (VARCHAR(64), FK $\to$ `automation_executions.execution_id`), `tool_name` (VARCHAR(50), Not Null), `action_verb` (VARCHAR(50), Not Null), `parameters_payload` (JSONB, Not Null), `status` (VARCHAR(20), Not Null), `result_payload` (JSONB, Nullable), `error_message` (TEXT, Nullable), `sequence_order` (INTEGER, Not Null), `executed_at` (TIMESTAMPTZ, Nullable).
+- **Attributes:** `action_id` (VARCHAR(64), PK), `execution_id` (VARCHAR(64), FK → `automation_executions.execution_id`), `tool_name` (VARCHAR(50), Not Null), `action_verb` (VARCHAR(50), Not Null), `parameters_payload` (JSONB, Not Null), `status` (VARCHAR(20), Not Null), `result_payload` (JSONB, Nullable), `error_message` (TEXT, Nullable), `sequence_order` (INTEGER, Not Null), `executed_at` (TIMESTAMPTZ, Nullable).
 - **Constraints:** `UNIQUE (execution_id, sequence_order)`, `UNIQUE (execution_id, action_id)`.
 
 #### Relation 10: `action_dependencies`
@@ -658,24 +693,24 @@ The table below catalogs candidate keys, functional dependencies, superkeys, and
 
 #### Relation 11: `calendar_event_sync`
 - **Purpose:** Tracks external Google Calendar event identifiers, sync status, and errors.
-- **Attributes:** `sync_id` (VARCHAR(64), PK), `action_id` (VARCHAR(64), Nullable FK $\to$ `planned_actions.action_id`), `chunk_id` (VARCHAR(64), Nullable FK $\to$ `transcript_chunks.chunk_id`), `external_event_id` (VARCHAR(128), Not Null, Unique), `event_summary` (VARCHAR(255), Not Null), `start_time` (TIMESTAMPTZ, Not Null), `end_time` (TIMESTAMPTZ, Not Null), `sync_status` (VARCHAR(20), Not Null), `error_message` (TEXT, Nullable), `created_at` (TIMESTAMPTZ, Not Null), `updated_at` (TIMESTAMPTZ, Not Null).
+- **Attributes:** `sync_id` (VARCHAR(64), PK), `action_id` (VARCHAR(64), Nullable FK → `planned_actions.action_id`), `chunk_id` (VARCHAR(64), Nullable FK → `transcript_chunks.chunk_id`), `external_event_id` (VARCHAR(128), Not Null, Unique), `event_summary` (VARCHAR(255), Not Null), `start_time` (TIMESTAMPTZ, Not Null), `end_time` (TIMESTAMPTZ, Not Null), `sync_status` (VARCHAR(20), Not Null), `error_message` (TEXT, Nullable), `created_at` (TIMESTAMPTZ, Not Null), `updated_at` (TIMESTAMPTZ, Not Null).
 
 #### Relation 12: `task_reminders`
 - **Purpose:** Local task management, scheduled reminders, and proactive follow-ups.
-- **Attributes:** `reminder_id` (VARCHAR(64), PK), `user_id` (UUID, FK $\to$ `users.user_id`), `title` (VARCHAR(255), Not Null), `description` (TEXT, Nullable), `scheduled_for` (TIMESTAMPTZ, Nullable), `due_date` (TIMESTAMPTZ, Nullable), `status` (VARCHAR(20), Not Null), `category` (VARCHAR(50), Not Null), `priority` (VARCHAR(20), Not Null), `source` (VARCHAR(50), Not Null), `external_reference` (VARCHAR(64), Nullable), `created_at` (TIMESTAMPTZ, Not Null), `updated_at` (TIMESTAMPTZ, Not Null).
+- **Attributes:** `reminder_id` (VARCHAR(64), PK), `user_id` (UUID, FK → `users.user_id`), `title` (VARCHAR(255), Not Null), `description` (TEXT, Nullable), `scheduled_for` (TIMESTAMPTZ, Nullable), `due_date` (TIMESTAMPTZ, Nullable), `status` (VARCHAR(20), Not Null), `category` (VARCHAR(50), Not Null), `priority` (VARCHAR(20), Not Null), `source` (VARCHAR(50), Not Null), `external_reference` (VARCHAR(64), Nullable), `created_at` (TIMESTAMPTZ, Not Null), `updated_at` (TIMESTAMPTZ, Not Null).
 
 #### Relation 13: `pending_contacts`
 - **Purpose:** Buffer for spoken phone numbers captured without verified names.
-- **Attributes:** `pending_id` (VARCHAR(64), PK), `user_id` (UUID, FK $\to$ `users.user_id`), `phone` (VARCHAR(32), Not Null), `name` (VARCHAR(150), Nullable), `status` (VARCHAR(30), Not Null), `confidence` (VARCHAR(10), Not Null), `context` (TEXT, Nullable), `source` (VARCHAR(50), Not Null), `reminder_id` (VARCHAR(64), Nullable, Unique, FK $\to$ `task_reminders.reminder_id`), `google_resource_name` (VARCHAR(128), Nullable), `captured_at` (TIMESTAMPTZ, Not Null), `resolved_at` (TIMESTAMPTZ, Nullable), `updated_at` (TIMESTAMPTZ, Not Null).
+- **Attributes:** `pending_id` (VARCHAR(64), PK), `user_id` (UUID, FK → `users.user_id`), `phone` (VARCHAR(32), Not Null), `name` (VARCHAR(150), Nullable), `status` (VARCHAR(30), Not Null), `confidence` (VARCHAR(10), Not Null), `context` (TEXT, Nullable), `source` (VARCHAR(50), Not Null), `reminder_id` (VARCHAR(64), Nullable, Unique, FK → `task_reminders.reminder_id`), `google_resource_name` (VARCHAR(128), Nullable), `captured_at` (TIMESTAMPTZ, Not Null), `resolved_at` (TIMESTAMPTZ, Nullable), `updated_at` (TIMESTAMPTZ, Not Null).
 - **Conditional Constraint:** Partial unique index on `(user_id, phone)` for `status = 'pending_name'`.
 
 #### Relation 14: `conversation_sessions`
 - **Purpose:** Formalizes conversational chat threads for multi-turn Agent Engine memory.
-- **Attributes:** `conversation_id` (VARCHAR(64), PK), `user_id` (UUID, FK $\to$ `users.user_id`), `title` (VARCHAR(255), Not Null), `started_at` (TIMESTAMPTZ, Not Null), `last_message_at` (TIMESTAMPTZ, Not Null), `is_archived` (BOOLEAN, Not Null).
+- **Attributes:** `conversation_id` (VARCHAR(64), PK), `user_id` (UUID, FK → `users.user_id`), `title` (VARCHAR(255), Not Null), `started_at` (TIMESTAMPTZ, Not Null), `last_message_at` (TIMESTAMPTZ, Not Null), `is_archived` (BOOLEAN, Not Null).
 
 #### Relation 15: `conversation_messages`
 - **Purpose:** Individual conversational turns preserving prompt history and responses.
-- **Attributes:** `message_id` (VARCHAR(64), PK), `conversation_id` (VARCHAR(64), FK $\to$ `conversation_sessions.conversation_id`), `sender_role` (VARCHAR(20), Not Null), `message_content` (TEXT, Not Null), `message_seq` (INTEGER, Not Null), `timestamp` (TIMESTAMPTZ, Not Null).
+- **Attributes:** `message_id` (VARCHAR(64), PK), `conversation_id` (VARCHAR(64), FK → `conversation_sessions.conversation_id`), `sender_role` (VARCHAR(20), Not Null), `message_content` (TEXT, Not Null), `message_seq` (INTEGER, Not Null), `timestamp` (TIMESTAMPTZ, Not Null).
 - **Constraints:** `UNIQUE (conversation_id, message_seq)`.
 
 ---
@@ -1138,7 +1173,9 @@ This section formally demonstrates how the normalized design mitigates the inser
 - **Problem in UNF:** To record a new user or configure an autonomous tool action, a dummy audio session and empty transcript chunk had to be generated.
 - **Resolution in Normalized Model:** Because `users`, `task_reminders`, `calendar_event_sync`, and `conversation_sessions` are distinct relations with their own primary keys (`user_id`, `reminder_id`, `sync_id`, `conversation_id`), new users, tasks, and conversations can be inserted without requiring any audio sessions or speech transcripts.
 - **Proof:** In the relation `USERS`, the primary key is `user_id`. The insert operation:
-  $$\text{INSERT INTO users (user_id, email, full_name) VALUES (...)}$$
+  ```sql
+  INSERT INTO users (user_id, email, full_name) VALUES (...);
+  ```
   executes with zero null values across unrelated domain attributes.
 
 ### 14.2 Update Anomaly Mitigation
