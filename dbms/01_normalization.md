@@ -190,18 +190,22 @@ In legacy or prototype systems, data often starts as flat files, single denormal
 
 To demonstrate the full academic normalization journey, we formulate the **Universal Unnormalized EchoVault Relation (`UNF_ECHOVAULT_RECORD`)**. This representation reflects how a single continuous recording and interaction event captures sessions, pause intervals, transcripts, synthesized memories, extracted entities, proposed action sequences, tasks, calendar sync entries, and contacts in a single nested structure.
 
-$$
-\begin{aligned}
-\text{UNF\_ECHOVAULT}( & \text{session\_id}, \text{session\_status}, \text{started\_at}, \text{ended\_at}, \text{duration\_seconds}, \text{user\_id}, \text{user\_name}, \text{user\_email}, \\
-& \{\text{pause\_interval\_id}, \text{paused\_at}, \text{resumed\_at}\}, \\
-& \{\text{chunk\_id}, \text{chunk\_seq}, \text{chunk\_text}, \text{raw\_text}, \text{confidence}, \text{raw\_confidence}, \text{speaker}, \text{start\_time}, \text{end\_time}\}, \\
-& \{\text{refined\_id}, \text{summary}, \text{category}, \text{importance}, \text{status}, \{\text{entity\_type}, \text{entity\_value}\}, \{\text{source\_chunk\_id}\}\}, \\
-& \{\text{execution\_id}, \text{command\_text}, \text{intent}, \text{exec\_status}, \{\text{action\_id}, \text{tool\_name}, \text{action\_verb}, \text{params}, \text{action\_status}, \{\text{prerequisite\_action\_id}\}\}\}, \\
-& \{\text{calendar\_sync\_id}, \text{external\_event\_id}, \text{sync\_summary}, \text{event\_start}, \text{event\_end}, \text{sync\_status}\}, \\
-& \{\text{reminder\_id}, \text{rem\_title}, \text{scheduled\_for}, \text{due\_date}, \text{rem\_status}, \text{rem\_priority}\}, \\
-& \{\text{pending\_id}, \text{phone}, \text{contact\_name}, \text{contact\_status}, \text{contact\_confidence}, \text{google\_resource\_name}\} )
-\end{aligned}
-$$
+**`UNF_ECHOVAULT_RECORD`**
+
+The unnormalized structure contains the following nested repeating attribute groups representing an entire continuous recording and multi-turn workflow:
+
+- **Root Session Attributes:** `session_id`, `session_status`, `started_at`, `ended_at`, `duration_seconds`, `user_id`, `user_name`, `user_email`
+- **Repeating Pause Intervals (1:N):** `pause_interval_id`, `paused_at`, `resumed_at`
+- **Repeating Transcript Utterances (1:N):** `chunk_id`, `chunk_seq`, `chunk_text`, `raw_text`, `confidence`, `raw_confidence`, `speaker`, `start_time`, `end_time`
+- **Repeating Synthesized Memories (1:N):** `refined_id`, `summary`, `category`, `importance`, `status`
+  - **Nested Source Audio Chunks (M:N):** `source_chunk_id`
+  - **Nested Extracted Entities (1:N):** `entity_type`, `entity_value`
+- **Repeating Automation Executions (1:N):** `execution_id`, `command_text`, `intent`, `exec_status`
+  - **Nested Planned Actions (1:N):** `action_id`, `tool_name`, `action_verb`, `params`, `action_status`
+    - **Nested Action Prerequisites (DAG Dependencies):** `prerequisite_action_id`
+- **Repeating External Calendar Synchronizations (1:N):** `calendar_sync_id`, `external_event_id`, `sync_summary`, `event_start`, `event_end`, `sync_status`
+- **Repeating Reminders & Tasks (1:N):** `reminder_id`, `rem_title`, `scheduled_for`, `due_date`, `rem_status`, `rem_priority`
+- **Repeating Candidate Contacts (1:N):** `pending_id`, `phone`, `contact_name`, `contact_status`, `contact_confidence`, `google_resource_name`
 
 ### 6.2 Synthetic Illustrative Scenario (UNF Concrete Instance)
 
@@ -241,7 +245,7 @@ $$
 ## 7. First Normal Form (1NF)
 
 ### 7.1 Formal Definition of 1NF
-A relation $R$ is in **First Normal Form (1NF)** if and only if:
+A relation R is in **First Normal Form (1NF)** if and only if:
 1. The domain of each attribute contains only **atomic (indivisible) values**.
 2. There are **no repeating groups** or nested relations within tuples.
 3. Every tuple can be **uniquely identified** by a primary key.
@@ -363,9 +367,9 @@ Stores individual chat interaction turns.
 ## 8. Second Normal Form (2NF)
 
 ### 8.1 Formal Definition of 2NF
-A relation $R$ is in **Second Normal Form (2NF)** if and only if:
-1. $R$ is in **First Normal Form (1NF)**.
-2. Every **non-prime attribute** (an attribute not part of any candidate key) is **fully functionally dependent** on every candidate key of $R$.
+A relation R is in **Second Normal Form (2NF)** if and only if:
+1. R is in **First Normal Form (1NF)**.
+2. Every **non-prime attribute** (an attribute not part of any candidate key) is **fully functionally dependent** on every candidate key of R.
    - In other words, no non-prime attribute may depend on a proper subset of any composite candidate key (elimination of **partial functional dependencies**).
 
 ### 8.2 Partial Functional Dependency Analysis
@@ -393,7 +397,7 @@ Let us examine all 1NF relations for composite keys:
    - **`MEMORY_CHUNK_SOURCES_1NF`:**
      - Candidate Key: `(refined_id, chunk_id)`
      - Non-prime attribute: `association_score`
-     - Dependency: $\{\text{refined\_id}, \text{chunk\_id}\} \to \text{association\_score}$
+     - **Functional Dependency:** `(refined_id, chunk_id) -> association_score`
      - `association_score` represents the relevance of that specific transcript chunk to that specific memory summary. It does not depend on `refined_id` alone, nor on `chunk_id` alone. Hence, no partial dependency exists.
    - **`ACTION_DEPENDENCIES_1NF`:**
      - Primary Key: `(action_id, depends_on_action_id)`
@@ -409,12 +413,12 @@ All fifteen relations satisfy 2NF: single-key relations possess no proper subkey
 ## 9. Third Normal Form (3NF)
 
 ### 9.1 Formal Definition of 3NF
-A relation $R$ is in **Third Normal Form (3NF)** if and only if:
-1. $R$ is in **Second Normal Form (2NF)**.
-2. For every non-trivial functional dependency $X \to A$ in $R$:
-   - $X$ is a **superkey** of $R$, OR
-   - $A$ is a **prime attribute** (member of a candidate key of $R$).
-   - Equivalently, no non-prime attribute is **transitively dependent** on any candidate key ($X \to Y$ and $Y \to A$ where $Y$ is not a superkey).
+A relation R is in **Third Normal Form (3NF)** if and only if:
+1. R is in **Second Normal Form (2NF)**.
+2. For every non-trivial functional dependency `X -> A` in R:
+   - `X` is a **superkey** of R, OR
+   - `A` is a **prime attribute** (member of a candidate key of R).
+   - Equivalently, no non-prime attribute is **transitively dependent** on any candidate key (`X -> Y` and `Y -> A` where `Y` is not a superkey).
 
 ### 9.2 Identification and Elimination of Transitive Dependencies
 
@@ -431,9 +435,9 @@ def normalize_confidence(logprob):
 
 In `TRANSCRIPT_CHUNKS`, we have:
 - Candidate key: `chunk_id`
-- Dependencies:
-  $$\text{chunk\_id} \to \text{raw\_confidence}$$
-  $$\text{raw\_confidence} \to \text{confidence}$$
+- **Functional Dependencies:**
+  - `chunk_id -> raw_confidence`
+  - `raw_confidence -> confidence`
 
 Because `raw_confidence` is a non-prime attribute and not a superkey, `confidence` is transitively dependent on `chunk_id`.
 
@@ -445,13 +449,13 @@ Because `raw_confidence` is a non-prime attribute and not a superkey, `confidenc
 >     TRUNC((1.0 + GREATEST(-1.0, LEAST(0.0, raw_confidence))) * 100)::INTEGER
 > ) STORED
 > ```
-> *Academic Clarification:* Utilizing a database-generated column is a **controlled implementation mechanism**, NOT the formal elimination of the underlying functional dependency. Mathematically, $\text{raw\_confidence} \to \text{confidence}$ still holds. However, because the database engine enforces the computation deterministically and immutably at the storage layer, update anomalies (where `raw_confidence` changes without updating `confidence`) are physically prevented.
+> *Academic Clarification:* Utilizing a database-generated column is a **controlled implementation mechanism**, NOT the formal elimination of the underlying functional dependency. Mathematically, the functional dependency `raw_confidence -> confidence` still holds. However, because the database engine enforces the computation deterministically and immutably at the storage layer, update anomalies (where `raw_confidence` changes without updating `confidence`) are physically prevented.
 
 #### 2. Session Duration & Pause Modeling
 In the prototype `listening_sessions` table, `duration_seconds` was stored alongside `started_at`, `paused_at`, and `ended_at`. 
 - In reality, users can pause and resume a session multiple times during ambient listening. A single `paused_at` column cannot track multiple pause intervals.
 - To eliminate transitive ambiguity and ensure data integrity, we introduce `session_pause_intervals` to record every `(paused_at, resumed_at)` event.
-- In `listening_sessions`, `duration_seconds` is explicitly defined as an **independently accumulated hardware measurement** (audio sample frames received $\times$ sample period) recorded by the audio capture thread, rather than an algebraically derived difference between timestamps. This eliminates transitive dependencies on session start/end timestamps.
+- In `listening_sessions`, `duration_seconds` is explicitly defined as an **independently accumulated hardware measurement** (audio sample frames received × sample period) recorded by the audio capture thread, rather than an algebraically derived difference between timestamps. This eliminates transitive dependencies on session start/end timestamps.
 
 #### 3. Calendar Synchronization Metadata
 In the existing prototype, `calendar_automations` stored calendar details with a loose foreign key to `chunk_id`.
@@ -464,126 +468,157 @@ In the existing prototype, `calendar_automations` stored calendar details with a
 ## 10. Boyce-Codd Normal Form (BCNF) Analysis
 
 ### 10.1 Formal Definition of BCNF
-A relation $R$ is in **Boyce-Codd Normal Form (BCNF)** if and only if:
-- For every non-trivial functional dependency $X \to Y$ holding in $R$, the determinant $X$ is a **superkey** of $R$.
+A relation R is in **Boyce-Codd Normal Form (BCNF)** if and only if:
+- For every non-trivial functional dependency `X -> Y` holding in R, the determinant `X` is a **superkey** of R.
 
-BCNF is strictly stronger than 3NF: it disallows dependencies $X \to A$ where $A$ is prime unless $X$ is a superkey.
+BCNF is strictly stronger than 3NF: it disallows dependencies `X -> A` where `A` is prime unless `X` is a superkey.
 
 ### 10.2 Table-by-Table BCNF Evaluation
 
 #### 1. Relation: `USERS`
-- Attributes: `user_id`, `email`, `full_name`, `created_at`
-- Candidate Keys: `user_id` (CK₁, Primary Key), `email` (CK₂, Alternate Key)
-- Functional Dependencies:
-  1. $\text{user\_id} \to \text{email}, \text{full\_name}, \text{created\_at}$ (Determinant `user_id` is a superkey)
-  2. $\text{email} \to \text{user\_id}, \text{full\_name}, \text{created\_at}$ (Determinant `email` is a superkey)
-- **BCNF Status:** **Satisfied.** Every determinant is a candidate key.
+- **Attributes:** `user_id`, `email`, `full_name`, `created_at`
+- **Primary Key:** `user_id`
+- **Alternate Candidate Key:** `email`
+- **Functional Dependencies:**
+  - `user_id -> email, full_name, created_at`
+    - Determinant: `user_id` (Candidate key / Superkey: Yes)
+  - `email -> user_id, full_name, created_at`
+    - Determinant: `email` (Candidate key / Superkey: Yes)
+- **BCNF Analysis:** Every determinant is a candidate key and therefore a superkey.
+- **BCNF Status:** Satisfied.
 
 #### 2. Relation: `LISTENING_SESSIONS`
-- Attributes: `session_id`, `user_id`, `status`, `started_at`, `ended_at`, `duration_seconds`
-- Candidate Key: `session_id` (CK)
-- Functional Dependencies:
-  $$\text{session\_id} \to \text{user\_id}, \text{status}, \text{started\_at}, \text{ended\_at}, \text{duration\_seconds}$$
-- Non-key determinants: None.
-- **BCNF Status:** **Satisfied.**
+- **Attributes:** `session_id`, `user_id`, `status`, `started_at`, `ended_at`, `duration_seconds`
+- **Primary Key:** `session_id`
+- **Functional Dependencies:**
+  - `session_id -> user_id, status, started_at, ended_at, duration_seconds`
+    - Determinant: `session_id` (Candidate key / Superkey: Yes)
+- **Non-key Determinants:** None.
+- **BCNF Analysis:** The single determinant `session_id` is the primary key and superkey.
+- **BCNF Status:** Satisfied.
 
 #### 3. Relation: `SESSION_PAUSE_INTERVALS`
-- Attributes: `interval_id`, `session_id`, `paused_at`, `resumed_at`, `pause_duration_seconds`
-- Candidate Key: `interval_id` (CK)
-- Functional Dependencies:
-  $$\text{interval\_id} \to \text{session\_id}, \text{paused\_at}, \text{resumed\_at}, \text{pause\_duration\_seconds}$$
-- **BCNF Status:** **Satisfied.**
+- **Attributes:** `interval_id`, `session_id`, `paused_at`, `resumed_at`, `pause_duration_seconds`
+- **Primary Key:** `interval_id`
+- **Functional Dependencies:**
+  - `interval_id -> session_id, paused_at, resumed_at, pause_duration_seconds`
+    - Determinant: `interval_id` (Candidate key / Superkey: Yes)
+- **Non-key Determinants:** None.
+- **BCNF Analysis:** The single determinant `interval_id` is the primary key and superkey.
+- **BCNF Status:** Satisfied.
 
 #### 4. Relation: `TRANSCRIPT_CHUNKS`
-- Attributes: `chunk_id`, `session_id`, `sequence_number`, `timestamp`, `text`, `original_text`, `raw_confidence`, `confidence`, `speaker`, `start_time`, `end_time`, `is_deleted`, `is_reviewed`, `is_important`, `category`, `last_edited_at`, `is_final`
-- Candidate Keys:
-  - CK₁: `chunk_id`
-  - CK₂: {`session_id`, `sequence_number`}
-- Functional Dependencies:
-  1. $\text{chunk\_id} \to \text{session\_id}, \text{sequence\_number}, \dots$ (Determinant is superkey CK₁)
-  2. $\{\text{session\_id}, \text{sequence\_number}\} \to \text{chunk\_id}, \dots$ (Determinant is superkey CK₂)
-  3. $\text{raw\_confidence} \to \text{confidence}$ (Generated stored column choice; implementation-enforced determinism).
-- **BCNF Status:** **Satisfied under Generated Column Semantics.**
+- **Attributes:** `chunk_id`, `session_id`, `sequence_number`, `timestamp`, `text`, `original_text`, `raw_confidence`, `confidence`, `speaker`, `start_time`, `end_time`, `is_deleted`, `is_reviewed`, `is_important`, `category`, `last_edited_at`, `is_final`
+- **Primary Key:** `chunk_id`
+- **Composite Candidate Key:** (`session_id`, `sequence_number`)
+- **Functional Dependencies:**
+  - `chunk_id -> session_id, sequence_number, timestamp, text, original_text, raw_confidence, speaker, start_time, end_time, is_deleted, is_reviewed, is_important, category, last_edited_at, is_final`
+    - Determinant: `chunk_id` (Candidate key / Superkey: Yes)
+  - `(session_id, sequence_number) -> chunk_id, timestamp, text, original_text, raw_confidence, speaker, start_time, end_time, is_deleted, is_reviewed, is_important, category, last_edited_at, is_final`
+    - Determinant: (`session_id`, `sequence_number`) (Candidate key / Superkey: Yes)
+  - `raw_confidence -> confidence`
+    - Controlled implementation choice: `confidence` is stored as a PostgreSQL `GENERATED ALWAYS AS (TRUNC((1.0 + GREATEST(-1.0, LEAST(0.0, raw_confidence))) * 100)::INTEGER) STORED` column. The database engine enforces deterministic synchronization at storage level.
+- **BCNF Analysis:** Both relational determinants are candidate keys and superkeys. The derived metric is stored via database-level generated column semantics.
+- **BCNF Status:** Satisfied (under Generated Column Semantics).
 
 #### 5. Relation: `REFINED_MEMORIES`
-- Attributes: `refined_id`, `user_id`, `summary`, `category`, `status`, `importance_score`, `last_updated`, `is_deleted`
-- Candidate Key: `refined_id` (CK)
-- Functional Dependencies:
-  $$\text{refined\_id} \to \text{user\_id}, \text{summary}, \text{category}, \text{status}, \text{importance\_score}, \text{last\_updated}, \text{is\_deleted}$$
-- **BCNF Status:** **Satisfied.**
+- **Attributes:** `refined_id`, `user_id`, `summary`, `category`, `status`, `importance_score`, `last_updated`, `is_deleted`
+- **Primary Key:** `refined_id`
+- **Functional Dependencies:**
+  - `refined_id -> user_id, summary, category, status, importance_score, last_updated, is_deleted`
+    - Determinant: `refined_id` (Candidate key / Superkey: Yes)
+- **Non-key Determinants:** None.
+- **BCNF Analysis:** The single determinant `refined_id` is the primary key and superkey.
+- **BCNF Status:** Satisfied.
 
 #### 6. Relation: `MEMORY_CHUNK_SOURCES`
-- Attributes: `refined_id`, `chunk_id`, `association_score`
-- Candidate Key: {`refined_id`, `chunk_id`} (CK)
-- Functional Dependency:
-  $$\{\text{refined\_id}, \text{chunk\_id}\} \to \text{association\_score}$$
-- Determinant is the entire candidate key.
-- **BCNF Status:** **Satisfied.**
+- **Attributes:** `refined_id`, `chunk_id`, `association_score`
+- **Composite Primary Key:** (`refined_id`, `chunk_id`)
+- **Functional Dependencies:**
+  - `(refined_id, chunk_id) -> association_score`
+    - Determinant: (`refined_id`, `chunk_id`) (Candidate key / Superkey: Yes)
+- **Non-key Determinants:** None.
+- **BCNF Analysis:** The determinant is the entire composite primary key and therefore a superkey.
+- **BCNF Status:** Satisfied.
 
 #### 7. Relation: `MEMORY_ENTITIES`
-- Attributes: `entity_id`, `refined_id`, `entity_type`, `entity_value`
-- Candidate Keys:
-  - CK₁: `entity_id`
-  - CK₂: {`refined_id`, `entity_type`, `entity_value`}
-- Functional Dependencies:
-  1. $\text{entity\_id} \to \text{refined\_id}, \text{entity\_type}, \text{entity\_value}$ (Determinant is superkey CK₁)
-  2. $\{\text{refined\_id}, \text{entity\_type}, \text{entity\_value}\} \to \text{entity\_id}$ (Determinant is superkey CK₂)
-- **BCNF Status:** **Satisfied.**
+- **Attributes:** `entity_id`, `refined_id`, `entity_type`, `entity_value`
+- **Primary Key:** `entity_id`
+- **Composite Candidate Key:** (`refined_id`, `entity_type`, `entity_value`)
+- **Functional Dependencies:**
+  - `entity_id -> refined_id, entity_type, entity_value`
+    - Determinant: `entity_id` (Candidate key / Superkey: Yes)
+  - `(refined_id, entity_type, entity_value) -> entity_id`
+    - Determinant: (`refined_id`, `entity_type`, `entity_value`) (Candidate key / Superkey: Yes)
+- **BCNF Analysis:** Both determinants are candidate keys and superkeys.
+- **BCNF Status:** Satisfied.
 
 #### 8. Relation: `AUTOMATION_EXECUTIONS`
-- Attributes: `execution_id`, `session_id`, `user_id`, `command_text`, `detected_intent`, `status`, `error_message`, `created_at`, `updated_at`
-- Candidate Key: `execution_id` (CK)
-- Functional Dependencies:
-  $$\text{execution\_id} \to \text{session\_id}, \text{user\_id}, \text{command\_text}, \text{detected\_intent}, \text{status}, \text{error\_message}, \text{created\_at}, \text{updated\_at}$$
-- **BCNF Status:** **Satisfied.**
+- **Attributes:** `execution_id`, `session_id`, `user_id`, `command_text`, `detected_intent`, `status`, `error_message`, `created_at`, `updated_at`
+- **Primary Key:** `execution_id`
+- **Functional Dependencies:**
+  - `execution_id -> session_id, user_id, command_text, detected_intent, status, error_message, created_at, updated_at`
+    - Determinant: `execution_id` (Candidate key / Superkey: Yes)
+- **Non-key Determinants:** None.
+- **BCNF Analysis:** The single determinant `execution_id` is the primary key and superkey.
+- **BCNF Status:** Satisfied.
 
 #### 9. Relation: `PLANNED_ACTIONS`
-- Attributes: `action_id`, `execution_id`, `tool_name`, `action_verb`, `parameters_payload`, `status`, `result_payload`, `error_message`, `sequence_order`, `executed_at`
-- Candidate Keys:
-  - CK₁: `action_id`
-  - CK₂: {`execution_id`, `sequence_order`}
-  - Alternate unique composite key (CK₃): {`execution_id`, `action_id`}
-- Functional Dependencies:
-  1. $\text{action\_id} \to \text{execution\_id}, \text{tool\_name}, \dots$ (Determinant is CK₁)
-  2. $\{\text{execution\_id}, \text{sequence\_order}\} \to \text{action\_id}, \dots$ (Determinant is CK₂)
-- **BCNF Status:** **Satisfied.**
+- **Attributes:** `action_id`, `execution_id`, `tool_name`, `action_verb`, `parameters_payload`, `status`, `result_payload`, `error_message`, `sequence_order`, `executed_at`
+- **Primary Key:** `action_id`
+- **Composite Candidate Key:** (`execution_id`, `sequence_order`)
+- **Alternate Composite Candidate Key:** (`execution_id`, `action_id`)
+- **Functional Dependencies:**
+  - `action_id -> execution_id, tool_name, action_verb, parameters_payload, status, result_payload, error_message, sequence_order, executed_at`
+    - Determinant: `action_id` (Candidate key / Superkey: Yes)
+  - `(execution_id, sequence_order) -> action_id, tool_name, action_verb, parameters_payload, status, result_payload, error_message, executed_at`
+    - Determinant: (`execution_id`, `sequence_order`) (Candidate key / Superkey: Yes)
+- **BCNF Analysis:** Both determinants are candidate keys and superkeys.
+- **BCNF Status:** Satisfied.
 
 #### 10. Relation: `ACTION_DEPENDENCIES`
-- Attributes: `execution_id`, `action_id`, `depends_on_action_id`
-- Candidate Key: {`action_id`, `depends_on_action_id`} (CK)
-- Dependencies:
-  $$\text{action\_id} \to \text{execution\_id}$$
-  $$\text{depends\_on\_action\_id} \to \text{execution\_id}$$
-- Foreign Key Constraints:
+- **Attributes:** `execution_id`, `action_id`, `depends_on_action_id`
+- **Composite Primary Key:** (`action_id`, `depends_on_action_id`)
+- **Functional Dependencies:**
+  - `action_id -> execution_id`
+    - Determinant: `action_id` (Candidate key / Superkey of parent relation `planned_actions`)
+  - `depends_on_action_id -> execution_id`
+    - Determinant: `depends_on_action_id` (Candidate key / Superkey of parent relation `planned_actions`)
+- **Foreign Key Constraints:**
   - `(execution_id, action_id) REFERENCES planned_actions(execution_id, action_id)`
   - `(execution_id, depends_on_action_id) REFERENCES planned_actions(execution_id, action_id)`
-- Cycle Prevention:
+- **Cycle Prevention:**
   - Trivial 1-hop cycles are prevented via `CHECK (action_id <> depends_on_action_id)`.
-  - Longer DAG cycles ($A \to B \to C \to A$) are validated by `AgentEngine`'s topological sorter prior to database insertion.
-- **BCNF Status:** **Satisfied.**
+  - Longer DAG cycles (`A -> B -> C -> A`) are validated by `AgentEngine`'s topological sorter prior to database insertion.
+- **BCNF Analysis:** Every dependency determinant is a superkey of the scoped execution entity.
+- **BCNF Status:** Satisfied.
 
 #### 11. Relation: `CALENDAR_EVENT_SYNC`
-- Attributes: `sync_id`, `action_id`, `chunk_id`, `external_event_id`, `event_summary`, `start_time`, `end_time`, `sync_status`, `error_message`, `created_at`, `updated_at`
-- Candidate Keys:
-  - CK₁: `sync_id` (Primary Key)
-  - CK₂: `external_event_id` (Alternate Key)
-- Functional Dependencies:
-  $$\text{sync\_id} \to \text{action\_id}, \text{chunk\_id}, \text{external\_event\_id}, \dots$$
-  $$\text{external\_event\_id} \to \text{sync\_id}, \text{action\_id}, \text{chunk\_id}, \dots$$
-- **BCNF Status:** **Satisfied.**
+- **Attributes:** `sync_id`, `action_id`, `chunk_id`, `external_event_id`, `event_summary`, `start_time`, `end_time`, `sync_status`, `error_message`, `created_at`, `updated_at`
+- **Primary Key:** `sync_id`
+- **Alternate Candidate Key:** `external_event_id`
+- **Functional Dependencies:**
+  - `sync_id -> action_id, chunk_id, external_event_id, event_summary, start_time, end_time, sync_status, error_message, created_at, updated_at`
+    - Determinant: `sync_id` (Candidate key / Superkey: Yes)
+  - `external_event_id -> sync_id, action_id, chunk_id, event_summary, start_time, end_time, sync_status, error_message, created_at, updated_at`
+    - Determinant: `external_event_id` (Candidate key / Superkey: Yes)
+- **BCNF Analysis:** Both determinants are candidate keys and superkeys.
+- **BCNF Status:** Satisfied.
 
 #### 12. Relation: `TASK_REMINDERS`
-- Attributes: `reminder_id`, `user_id`, `title`, `description`, `scheduled_for`, `due_date`, `status`, `category`, `priority`, `source`, `external_reference`, `created_at`, `updated_at`
-- Candidate Key: `reminder_id` (CK)
-- Functional Dependencies:
-  $$\text{reminder\_id} \to \text{user\_id}, \text{title}, \text{description}, \text{scheduled\_for}, \text{due\_date}, \text{status}, \text{category}, \text{priority}, \text{source}, \text{external\_reference}, \text{created\_at}, \text{updated\_at}$$
-- **BCNF Status:** **Satisfied.**
+- **Attributes:** `reminder_id`, `user_id`, `title`, `description`, `scheduled_for`, `due_date`, `status`, `category`, `priority`, `source`, `external_reference`, `created_at`, `updated_at`
+- **Primary Key:** `reminder_id`
+- **Functional Dependencies:**
+  - `reminder_id -> user_id, title, description, scheduled_for, due_date, status, category, priority, source, external_reference, created_at, updated_at`
+    - Determinant: `reminder_id` (Candidate key / Superkey: Yes)
+- **Non-key Determinants:** None.
+- **BCNF Analysis:** The single determinant `reminder_id` is the primary key and superkey.
+- **BCNF Status:** Satisfied.
 
 #### 13. Relation: `PENDING_CONTACTS`
-- Attributes: `pending_id`, `user_id`, `phone`, `name`, `status`, `confidence`, `context`, `source`, `reminder_id`, `google_resource_name`, `captured_at`, `resolved_at`, `updated_at`
-- Candidate Keys:
-  - CK₁: `pending_id` (The primary key identifying every tuple)
-  - Alternate Key: `reminder_id` (Enforced via `UNIQUE`, holding for rows where `reminder_id IS NOT NULL`)
+- **Attributes:** `pending_id`, `user_id`, `phone`, `name`, `status`, `confidence`, `context`, `source`, `reminder_id`, `google_resource_name`, `captured_at`, `resolved_at`, `updated_at`
+- **Primary Key:** `pending_id`
+- **Alternate Candidate Key:** `reminder_id` (Enforced via `UNIQUE`, holding for rows where `reminder_id IS NOT NULL`)
 - **Rigorous Clarification on `(user_id, phone, status)`:**
   - In `pending_contacts.py` lines 86–90, the application enforces that only *one* pending record may exist at status `'pending_name'` for a given phone number.
   - This is enforced in PostgreSQL via a **partial unique index**:
@@ -591,26 +626,33 @@ BCNF is strictly stronger than 3NF: it disallows dependencies $X \to A$ where $A
     CREATE UNIQUE INDEX uq_user_phone_active_pending ON pending_contacts(user_id, phone) WHERE status = 'pending_name';
     ```
   - **Academic Correction:** A partial unique index is a conditional business constraint, **NOT a candidate key** for the entire relation. Multiple tuples with status `'resolved'` or `'dismissed'` can legally exist for the same `(user_id, phone)` across time. Therefore, `(user_id, phone, status)` is not a superkey of `PENDING_CONTACTS`.
-- Functional Dependencies:
-  $$\text{pending\_id} \to \text{user\_id}, \text{phone}, \text{name}, \text{status}, \text{confidence}, \text{context}, \text{source}, \text{reminder\_id}, \text{google\_resource\_name}, \text{captured\_at}, \text{resolved\_at}, \text{updated\_at}$$
-- **BCNF Status:** **Satisfied.**
+- **Functional Dependencies:**
+  - `pending_id -> user_id, phone, name, status, confidence, context, source, reminder_id, google_resource_name, captured_at, resolved_at, updated_at`
+    - Determinant: `pending_id` (Candidate key / Superkey: Yes)
+- **BCNF Analysis:** The primary determinant `pending_id` is the primary key and superkey.
+- **BCNF Status:** Satisfied.
 
 #### 14. Relation: `CONVERSATION_SESSIONS`
-- Attributes: `conversation_id`, `user_id`, `title`, `started_at`, `last_message_at`, `is_archived`
-- Candidate Key: `conversation_id` (CK)
-- Functional Dependencies:
-  $$\text{conversation\_id} \to \text{user\_id}, \text{title}, \text{started\_at}, \text{last\_message\_at}, \text{is\_archived}$$
-- **BCNF Status:** **Satisfied.**
+- **Attributes:** `conversation_id`, `user_id`, `title`, `started_at`, `last_message_at`, `is_archived`
+- **Primary Key:** `conversation_id`
+- **Functional Dependencies:**
+  - `conversation_id -> user_id, title, started_at, last_message_at, is_archived`
+    - Determinant: `conversation_id` (Candidate key / Superkey: Yes)
+- **Non-key Determinants:** None.
+- **BCNF Analysis:** The single determinant `conversation_id` is the primary key and superkey.
+- **BCNF Status:** Satisfied.
 
 #### 15. Relation: `CONVERSATION_MESSAGES`
-- Attributes: `message_id`, `conversation_id`, `sender_role`, `message_content`, `message_seq`, `timestamp`
-- Candidate Keys:
-  - CK₁: `message_id`
-  - CK₂: {`conversation_id`, `message_seq`}
-- Functional Dependencies:
-  1. $\text{message\_id} \to \text{conversation\_id}, \text{sender\_role}, \text{message\_content}, \text{message\_seq}, \text{timestamp}$ (Determinant is superkey CK₁)
-  2. $\{\text{conversation\_id}, \text{message\_seq}\} \to \text{message\_id}, \dots$ (Determinant is superkey CK₂)
-- **BCNF Status:** **Satisfied.**
+- **Attributes:** `message_id`, `conversation_id`, `sender_role`, `message_content`, `message_seq`, `timestamp`
+- **Primary Key:** `message_id`
+- **Composite Candidate Key:** (`conversation_id`, `message_seq`)
+- **Functional Dependencies:**
+  - `message_id -> conversation_id, sender_role, message_content, message_seq, timestamp`
+    - Determinant: `message_id` (Candidate key / Superkey: Yes)
+  - `(conversation_id, message_seq) -> message_id, sender_role, message_content, timestamp`
+    - Determinant: (`conversation_id`, `message_seq`) (Candidate key / Superkey: Yes)
+- **BCNF Analysis:** Both determinants are candidate keys and superkeys.
+- **BCNF Status:** Satisfied.
 
 ---
 
@@ -618,23 +660,23 @@ BCNF is strictly stronger than 3NF: it disallows dependencies $X \to A$ where $A
 
 The table below catalogs candidate keys, functional dependencies, superkeys, and normal form verification across all **fifteen** proposed normalized relations.
 
-| Relation Name | Candidate Keys (CK) | Primary Functional Dependencies ($X \to Y$) | Partial Dependencies? | Transitive Dependencies? | Superkeys Verified | Normal Form Achieved |
+| Relation Name | Candidate Keys (CK) | Primary Functional Dependencies (X -> Y) | Partial Dependencies? | Transitive Dependencies? | Superkeys Verified | Normal Form Achieved |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`users`** | `user_id`, `email` | `user_id → email, full_name, created_at`<br>`email → user_id, full_name, created_at` | None | None | `user_id`, `email`, supersets | **BCNF** |
-| **`listening_sessions`** | `session_id` | `session_id → user_id, status, started_at, ended_at, duration_seconds` | None | None (independent frames) | `session_id`, supersets | **BCNF** |
-| **`session_pause_intervals`** | `interval_id` | `interval_id → session_id, paused_at, resumed_at, pause_duration_seconds` | None | None | `interval_id`, supersets | **BCNF** |
-| **`transcript_chunks`** | `chunk_id`, `{session_id, sequence_number}` | `chunk_id → session_id, sequence_number, timestamp, text, original_text, raw_confidence, speaker, start_time, end_time, is_deleted, is_reviewed, is_important, category, last_edited_at, is_final`<br>`{session_id, sequence_number} → chunk_id, ...` | None | Controlled generated stored column | `chunk_id`, `{session_id, seq}`, supersets | **BCNF** *(Generated Column)* |
-| **`refined_memories`** | `refined_id` | `refined_id → user_id, summary, category, status, importance_score, last_updated, is_deleted` | None | None | `refined_id`, supersets | **BCNF** |
-| **`memory_chunk_sources`** | `{refined_id, chunk_id}` | `{refined_id, chunk_id} → association_score` | None | None | `{refined_id, chunk_id}`, supersets | **BCNF** |
-| **`memory_entities`** | `entity_id`, `{refined_id, entity_type, entity_value}` | `entity_id → refined_id, entity_type, entity_value`<br>`{refined_id, entity_type, entity_value} → entity_id` | None | None | `entity_id`, composite CK | **BCNF** |
-| **`automation_executions`**| `execution_id` | `execution_id → session_id, user_id, command_text, detected_intent, status, error_message, created_at, updated_at` | None | None | `execution_id`, supersets | **BCNF** |
-| **`planned_actions`** | `action_id`, `{execution_id, sequence_order}` | `action_id → execution_id, tool_name, action_verb, parameters_payload, status, result_payload, error_message, sequence_order, executed_at`<br>`{execution_id, sequence_order} → action_id, ...` | None | None (JSONB payload trade-off) | `action_id`, composite CK | **BCNF** *(Hybrid JSONB)* |
-| **`action_dependencies`** | `{action_id, depends_on_action_id}` | `{action_id, depends_on_action_id} → execution_id`<br>`action_id → execution_id` | None | None | `{action_id, depends_on}` | **BCNF** |
-| **`calendar_event_sync`**| `sync_id`, `external_event_id` | `sync_id → action_id, chunk_id, external_event_id, event_summary, start_time, end_time, sync_status, error_message, created_at, updated_at`<br>`external_event_id → sync_id, ...` | None | None | `sync_id`, `external_event_id` | **BCNF** |
-| **`task_reminders`** | `reminder_id` | `reminder_id → user_id, title, description, scheduled_for, due_date, status, category, priority, source, external_reference, created_at, updated_at` | None | None | `reminder_id`, supersets | **BCNF** |
-| **`pending_contacts`** | `pending_id`, `reminder_id` (non-null rows) | `pending_id → user_id, phone, name, status, confidence, context, source, reminder_id, google_resource_name, captured_at, resolved_at, updated_at` | None | None | `pending_id`, `reminder_id` | **BCNF** |
-| **`conversation_sessions`**| `conversation_id` | `conversation_id → user_id, title, started_at, last_message_at, is_archived` | None | None | `conversation_id`, supersets | **BCNF** |
-| **`conversation_messages`**| `message_id`, `{conversation_id, message_seq}` | `message_id → conversation_id, sender_role, message_content, message_seq, timestamp`<br>`{conversation_id, message_seq} → message_id, ...` | None | None | `message_id`, composite CK | **BCNF** |
+| **`users`** | `user_id`, `email` | `user_id -> email, full_name, created_at`<br>`email -> user_id, full_name, created_at` | None | None | `user_id`, `email`, supersets | **BCNF** |
+| **`listening_sessions`** | `session_id` | `session_id -> user_id, status, started_at, ended_at, duration_seconds` | None | None (independent frames) | `session_id`, supersets | **BCNF** |
+| **`session_pause_intervals`** | `interval_id` | `interval_id -> session_id, paused_at, resumed_at, pause_duration_seconds` | None | None | `interval_id`, supersets | **BCNF** |
+| **`transcript_chunks`** | `chunk_id`, (`session_id`, `sequence_number`) | `chunk_id -> session_id, sequence_number, timestamp, text, original_text, raw_confidence, speaker, start_time, end_time, is_deleted, is_reviewed, is_important, category, last_edited_at, is_final`<br>`(session_id, sequence_number) -> chunk_id, ...` | None | Controlled generated stored column | `chunk_id`, (`session_id`, `seq`), supersets | **BCNF** *(Generated Column)* |
+| **`refined_memories`** | `refined_id` | `refined_id -> user_id, summary, category, status, importance_score, last_updated, is_deleted` | None | None | `refined_id`, supersets | **BCNF** |
+| **`memory_chunk_sources`** | (`refined_id`, `chunk_id`) | `(refined_id, chunk_id) -> association_score` | None | None | (`refined_id`, `chunk_id`), supersets | **BCNF** |
+| **`memory_entities`** | `entity_id`, (`refined_id`, `entity_type`, `entity_value`) | `entity_id -> refined_id, entity_type, entity_value`<br>`(refined_id, entity_type, entity_value) -> entity_id` | None | None | `entity_id`, composite CK | **BCNF** |
+| **`automation_executions`**| `execution_id` | `execution_id -> session_id, user_id, command_text, detected_intent, status, error_message, created_at, updated_at` | None | None | `execution_id`, supersets | **BCNF** |
+| **`planned_actions`** | `action_id`, (`execution_id`, `sequence_order`) | `action_id -> execution_id, tool_name, action_verb, parameters_payload, status, result_payload, error_message, sequence_order, executed_at`<br>`(execution_id, sequence_order) -> action_id, ...` | None | None (JSONB payload trade-off) | `action_id`, composite CK | **BCNF** *(Hybrid JSONB)* |
+| **`action_dependencies`** | (`action_id`, `depends_on_action_id`) | `(action_id, depends_on_action_id) -> execution_id`<br>`action_id -> execution_id` | None | None | (`action_id`, `depends_on`) | **BCNF** |
+| **`calendar_event_sync`**| `sync_id`, `external_event_id` | `sync_id -> action_id, chunk_id, external_event_id, event_summary, start_time, end_time, sync_status, error_message, created_at, updated_at`<br>`external_event_id -> sync_id, ...` | None | None | `sync_id`, `external_event_id` | **BCNF** |
+| **`task_reminders`** | `reminder_id` | `reminder_id -> user_id, title, description, scheduled_for, due_date, status, category, priority, source, external_reference, created_at, updated_at` | None | None | `reminder_id`, supersets | **BCNF** |
+| **`pending_contacts`** | `pending_id`, `reminder_id` (non-null rows) | `pending_id -> user_id, phone, name, status, confidence, context, source, reminder_id, google_resource_name, captured_at, resolved_at, updated_at` | None | None | `pending_id`, `reminder_id` | **BCNF** |
+| **`conversation_sessions`**| `conversation_id` | `conversation_id -> user_id, title, started_at, last_message_at, is_archived` | None | None | `conversation_id`, supersets | **BCNF** |
+| **`conversation_messages`**| `message_id`, (`conversation_id`, `message_seq`) | `message_id -> conversation_id, sender_role, message_content, message_seq, timestamp`<br>`(conversation_id, message_seq) -> message_id, ...` | None | None | `message_id`, composite CK | **BCNF** |
 
 ---
 
@@ -1200,8 +1242,8 @@ This section formally demonstrates how the normalized design mitigates the inser
 | **UNF** | Initial unnormalized structure | Inspected `database.py`, `agent.py`, `sqlite3` schema. Found repeating groups, nested JSON arrays (`source_memory_ids`, `proposed_actions`, `entities`), and lack of referential constraints. | Formulated the universal relation `UNF_ECHOVAULT` to model full multi-turn capture; documented insertion, update, and deletion anomalies. |
 | **1NF** | Atomic attribute values, no repeating groups, unique primary keys | `source_memory_ids` held lists of IDs; `entities` held JSON maps; `proposed_actions` held lists of execution objects. | Decomposed multivalued JSON arrays into dedicated relations: `memory_chunk_sources`, `memory_entities`, `planned_actions`, and `action_dependencies`. Enforced atomic scalar domains for relational control attributes (with documented JSONB payload trade-off). |
 | **2NF** | 1NF + no partial functional dependencies on composite candidate keys | Single-key relations satisfied 2NF trivially. In junction relations (`memory_chunk_sources`, `action_dependencies`), checked for partial dependencies. | Kept all entity attributes in parent relations (`TRANSCRIPT_CHUNKS`, `PLANNED_ACTIONS`), retaining only foreign keys and full-key associative attributes in junction tables. |
-| **3NF** | 2NF + no transitive functional dependencies ($X \to Y \to Z$) | In `transcript_chunks`, `confidence` was derived via function from `raw_confidence`. Session pause timestamps lacked interval modeling. | Replaced `confidence` with a PostgreSQL generated stored column. Formalized `session_pause_intervals` and `calendar_event_sync`, eliminating unpersisted pause and synchronization gaps. |
-| **BCNF** | For every non-trivial $X \to Y$, determinant $X$ must be a superkey | Evaluated all 15 final relations table-by-table. Verified that every determinant is a superkey / candidate key. | Validated candidate keys for all relations. Enforced execution-scoped composite foreign keys on `action_dependencies`, achieving complete BCNF. |
+| **3NF** | 2NF + no transitive functional dependencies (`X -> Y -> Z`) | In `transcript_chunks`, `confidence` was derived via function from `raw_confidence`. Session pause timestamps lacked interval modeling. | Replaced `confidence` with a PostgreSQL generated stored column. Formalized `session_pause_intervals` and `calendar_event_sync`, eliminating unpersisted pause and synchronization gaps. |
+| **BCNF** | For every non-trivial `X -> Y`, determinant `X` must be a superkey | Evaluated all 15 final relations table-by-table. Verified that every determinant is a superkey / candidate key. | Validated candidate keys for all relations. Enforced execution-scoped composite foreign keys on `action_dependencies`, achieving complete BCNF. |
 
 ---
 
@@ -1229,7 +1271,7 @@ This section formally demonstrates how the normalized design mitigates the inser
 1. **Multi-Tenancy Foundation:** Although the local EchoVault prototype currently operates in single-user desktop mode, the normalized schema assumes a multi-tenant foundation via `users(user_id)` to ensure academic completeness and cloud scalability.
 2. **Audio File Independence:** Audio files remain in `data/audio_chunks/*.wav` and are not stored as relational `BLOB`s. The relational model stores only temporal timestamps, sequence numbers, and text transcripts.
 3. **External Cloud State:** Google Calendar event IDs and Google People API resource names are treated as external strings (`external_event_id`, `google_resource_name`). The relational database does not attempt to mirror Google's entire schema, but only the synchronization metadata required by EchoVault.
-4. **DAG Cycle Prevention Boundary:** The database enforces 1-hop self-cycle rejection via `CHECK (action_id <> depends_on_action_id)` and execution containment via composite foreign keys. General cycle detection ($A \to B \to C \to A$) is managed by the application's topological sorting engine in `AgentEngine`.
+4. **DAG Cycle Prevention Boundary:** The database enforces 1-hop self-cycle rejection via `CHECK (action_id <> depends_on_action_id)` and execution containment via composite foreign keys. General cycle detection (`A -> B -> C -> A`) is managed by the application's topological sorting engine in `AgentEngine`.
 
 ---
 
