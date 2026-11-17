@@ -1,0 +1,220 @@
+erDiagram
+    %% ============================================================================
+    %% ECHOVAULT ENTITY-RELATIONSHIP DIAGRAM (NORMALIZED RELATIONAL SCHEMA)
+    %% Source: dbms/02_er_diagram.mmd
+    %% Target: PostgreSQL 16+ (15 Entities across 6 Core Modules)
+    %% ============================================================================
+
+    %% ----------------------------------------------------------------------------
+    %% Relationships & Cardinalities
+    %% ----------------------------------------------------------------------------
+
+    %% Root Tenant Relationships
+    USERS ||--o{ LISTENING_SESSIONS : "initiates"
+    USERS ||--o{ REFINED_MEMORIES : "owns"
+    USERS ||--o{ AUTOMATION_EXECUTIONS : "triggers"
+    USERS ||--o{ TASK_REMINDERS : "manages"
+    USERS ||--o{ PENDING_CONTACTS : "accumulates"
+    USERS ||--o{ CONVERSATION_SESSIONS : "participates_in"
+
+    %% Audio Ingestion (Remember)
+    LISTENING_SESSIONS ||--o{ SESSION_PAUSE_INTERVALS : "records_pauses"
+    LISTENING_SESSIONS ||--o{ TRANSCRIPT_CHUNKS : "yields"
+    LISTENING_SESSIONS ||--o{ AUTOMATION_EXECUTIONS : "invokes"
+
+    %% Memory System (Understand) - Many-to-Many via Associative Table
+    TRANSCRIPT_CHUNKS ||--o{ MEMORY_CHUNK_SOURCES : "sources"
+    TRANSCRIPT_CHUNKS ||--o{ CALENDAR_EVENT_SYNC : "provenance_for"
+    REFINED_MEMORIES ||--o{ MEMORY_CHUNK_SOURCES : "consolidates"
+    REFINED_MEMORIES ||--o{ MEMORY_ENTITIES : "contains"
+
+    %% Agent Engine (Act) - Execution DAG & Event Sync
+    AUTOMATION_EXECUTIONS ||--o{ PLANNED_ACTIONS : "plans"
+    PLANNED_ACTIONS ||--o{ ACTION_DEPENDENCIES : "is_dependent"
+    PLANNED_ACTIONS ||--o{ ACTION_DEPENDENCIES : "is_prerequisite"
+    PLANNED_ACTIONS ||--o{ CALENDAR_EVENT_SYNC : "triggers_sync"
+
+    %% Task & Contact Management - Optional 1-to-1 Relationship
+    TASK_REMINDERS |o--o| PENDING_CONTACTS : "tracks_followup"
+
+    %% Conversation Context
+    CONVERSATION_SESSIONS ||--o{ CONVERSATION_MESSAGES : "contains"
+
+    %% ----------------------------------------------------------------------------
+    %% Entity Definitions (15 Tables)
+    %% ----------------------------------------------------------------------------
+
+    %% 1. Users & Profiles (Root Tenant)
+    USERS {
+        UUID user_id PK
+        VARCHAR(255) email UK
+        VARCHAR(255) full_name
+        TIMESTAMP created_at
+    }
+
+    %% 2. Audio Ingestion: Listening Sessions
+    LISTENING_SESSIONS {
+        VARCHAR(50) session_id PK
+        UUID user_id FK
+        VARCHAR(50) status
+        TIMESTAMP started_at
+        TIMESTAMP ended_at
+        FLOAT duration_seconds
+    }
+
+    %% 3. Audio Ingestion: Pause Intervals
+    SESSION_PAUSE_INTERVALS {
+        BIGINT interval_id PK
+        VARCHAR(50) session_id FK
+        TIMESTAMP paused_at
+        TIMESTAMP resumed_at
+        FLOAT pause_duration_seconds
+    }
+
+    %% 4. Audio Ingestion: Transcript Chunks
+    TRANSCRIPT_CHUNKS {
+        VARCHAR(50) chunk_id PK
+        VARCHAR(50) session_id FK
+        INT sequence_number
+        TIMESTAMP timestamp
+        TEXT text
+        TEXT original_text
+        FLOAT raw_confidence
+        INT confidence
+        VARCHAR(50) speaker
+        FLOAT start_time
+        FLOAT end_time
+        BOOLEAN is_deleted
+        BOOLEAN is_reviewed
+        BOOLEAN is_important
+        VARCHAR(100) category
+        BOOLEAN is_final
+    }
+
+    %% 5. Memory System: Refined Memories
+    REFINED_MEMORIES {
+        VARCHAR(50) refined_id PK
+        UUID user_id FK
+        TEXT summary
+        VARCHAR(100) category
+        VARCHAR(50) status
+        FLOAT importance_score
+        TIMESTAMP last_updated
+        BOOLEAN is_deleted
+    }
+
+    %% 6. Memory System: Memory Chunk Sources (Associative Junction Table)
+    MEMORY_CHUNK_SOURCES {
+        VARCHAR(50) refined_id PK,FK
+        VARCHAR(50) chunk_id PK,FK
+        FLOAT association_score
+    }
+
+    %% 7. Memory System: Memory Entities (Named Entity Extraction)
+    MEMORY_ENTITIES {
+        BIGINT entity_id PK
+        VARCHAR(50) refined_id FK
+        VARCHAR(50) entity_type
+        VARCHAR(255) entity_value
+    }
+
+    %% 8. Task & Contact Management: Task Reminders
+    TASK_REMINDERS {
+        VARCHAR(50) reminder_id PK
+        UUID user_id FK
+        VARCHAR(255) title
+        TEXT description
+        TIMESTAMP scheduled_for
+        TIMESTAMP due_date
+        VARCHAR(50) status
+        VARCHAR(50) category
+        VARCHAR(20) priority
+        VARCHAR(50) source
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
+
+    %% 9. Task & Contact Management: Pending Contacts
+    PENDING_CONTACTS {
+        VARCHAR(50) pending_id PK
+        UUID user_id FK
+        VARCHAR(50) phone
+        VARCHAR(255) name
+        VARCHAR(50) status
+        VARCHAR(20) confidence
+        TEXT context
+        VARCHAR(50) source
+        VARCHAR(50) reminder_id FK
+        VARCHAR(255) google_resource_name
+        TIMESTAMP captured_at
+        TIMESTAMP resolved_at
+    }
+
+    %% 10. Conversation Context: Conversation Sessions
+    CONVERSATION_SESSIONS {
+        VARCHAR(50) conversation_id PK
+        UUID user_id FK
+        VARCHAR(255) title
+        TIMESTAMP started_at
+        TIMESTAMP last_message_at
+        BOOLEAN is_archived
+    }
+
+    %% 11. Conversation Context: Conversation Messages
+    CONVERSATION_MESSAGES {
+        VARCHAR(50) message_id PK
+        VARCHAR(50) conversation_id FK
+        VARCHAR(20) sender_role
+        TEXT message_content
+        INT message_seq
+        TIMESTAMP timestamp
+    }
+
+    %% 12. Agent Engine: Automation Executions
+    AUTOMATION_EXECUTIONS {
+        VARCHAR(50) execution_id PK
+        VARCHAR(50) session_id FK
+        UUID user_id FK
+        TEXT command_text
+        VARCHAR(100) detected_intent
+        VARCHAR(50) status
+        TEXT error_message
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
+
+    %% 13. Agent Engine: Planned Actions (Execution DAG Nodes)
+    PLANNED_ACTIONS {
+        VARCHAR(50) action_id PK
+        VARCHAR(50) execution_id FK
+        VARCHAR(100) tool_name
+        VARCHAR(50) action_verb
+        JSONB parameters_payload
+        VARCHAR(50) status
+        JSONB result_payload
+        TEXT error_message
+        INT sequence_order
+        TIMESTAMP executed_at
+    }
+
+    %% 14. Agent Engine: Action Dependencies (Self-Referencing DAG Edges)
+    ACTION_DEPENDENCIES {
+        VARCHAR(50) execution_id PK,FK
+        VARCHAR(50) action_id PK,FK
+        VARCHAR(50) depends_on_action_id PK,FK
+    }
+
+    %% 15. Agent Engine: Calendar Event Sync
+    CALENDAR_EVENT_SYNC {
+        VARCHAR(50) sync_id PK
+        VARCHAR(50) action_id FK
+        VARCHAR(50) chunk_id FK
+        VARCHAR(255) external_event_id
+        VARCHAR(255) event_summary
+        TIMESTAMP start_time
+        TIMESTAMP end_time
+        VARCHAR(50) sync_status
+        TEXT error_message
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
